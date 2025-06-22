@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>段落檢查工具</title>
+  <style>
+    body {
+      font-family: "Helvetica", "Noto Sans TC", sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar-right {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+    }
+
+    .analyze-btn, .clear-btn {
+      padding: 6px 14px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .analyze-btn {
+      background-color: #3c8d40;
+      color: white;
+    }
+
+    .clear-btn {
+      background-color: #a33e3e;
+      color: white;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      font-size: 16px;
+      padding: 10px;
+    }
+
+    #output pre {
+      background: #f7f7f7;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 6px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .duplicate {
+      font-weight: bold;
+    }
+
+    #output {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>段落檢查工具</h1>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <label for="delimiterInput">標點符號：</label>
+      <input type="text" id="delimiterInput" value="。！？!?" />
+      <button class="analyze-btn" onclick="processText()">分析段落</button>
+    </div>
+
+    <div class="toolbar-right">
+      <span id="stats-total">總共 0 段</span>　
+      <span id="stats-duplicate">重複段落：0 段</span>
+      <button class="clear-btn" onclick="clearText()">清除內容</button>
+    </div>
+  </div>
+
+  <textarea id="inputText" placeholder="請輸入段落文字..."></textarea>
+
+  <div id="output"></div>
+
+  <script>
+    function clearText() {
+      document.getElementById("inputText").value = "";
+      document.getElementById("output").innerHTML = "";
+      document.getElementById("stats-total").textContent = "總共 0 段";
+      document.getElementById("stats-duplicate").textContent = "重複段落：0 段";
+    }
+
+    function processText() {
+      const text = document.getElementById("inputText").value.trim();
+      const delimiterInput = document.getElementById("delimiterInput").value || "。！？!?";
+
+      // 建立正規表達式：包含所有輸入標點
+      const escapedDelimiters = delimiterInput.replace(/[\.\+\*\?\^\$\[\]\(\)\{\}\\\|]/g, "\\$&");
+      const delimiterRegex = new RegExp(`([${escapedDelimiters}])`, "g");
+
+      // 先斷句：每個標點後加上 \n
+      const withBreaks = text.replace(delimiterRegex, "$1\n");
+
+      // 根據 \n 斷成段落並清理空白
+      const paragraphs = withBreaks
+        .split("\n")
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+
+      // 顯示總段落數
+      document.getElementById("stats-total").textContent = `總共 ${paragraphs.length} 段`;
+
+      // 處理重複段落（五字相同視為重複）
+      const normalize = str => str.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "");
+      const getKeySet = str => {
+        const cleaned = normalize(str);
+        const set = new Set();
+        for (let i = 0; i <= cleaned.length - 5; i++) {
+          set.add(cleaned.substring(i, i + 5));
+        }
+        return set;
+      };
+
+      const paraKeySets = paragraphs.map(getKeySet);
+      const duplicateGroups = [];
+      const matched = new Array(paragraphs.length).fill(false);
+      const colorMap = new Map();
+
+      const colors = [
+        "#f3e9dc", "#e8d8c3", "#d5c4a1", "#ede0d4",
+        "#f6f0e2", "#d6ccc2", "#c8b6a6", "#e2d8cf",
+        "#e4d6a7", "#f0ebe3", "#ede4d9"
+      ];
+
+      let colorIndex = 0;
+      for (let i = 0; i < paragraphs.length; i++) {
+        if (matched[i]) continue;
+        const group = [i];
+        for (let j = i + 1; j < paragraphs.length; j++) {
+          const overlap = [...paraKeySets[i]].filter(k => paraKeySets[j].has(k));
+          if (overlap.length > 0) {
+            group.push(j);
+            matched[j] = true;
+          }
+        }
+        if (group.length > 1) {
+          const color = colors[colorIndex % colors.length];
+          group.forEach(index => colorMap.set(paragraphs[index], color));
+          colorIndex++;
+        }
+      }
+
+      document.getElementById("stats-duplicate").textContent = `重複段落：${colorMap.size} 段`;
+
+      // 顯示結果
+      const outputDiv = document.getElementById("output");
+      outputDiv.innerHTML = "";
+      paragraphs.forEach((p, i) => {
+        const pre = document.createElement("pre");
+        pre.textContent = `${i + 1}. ${p}`;
+        if (colorMap.has(p)) {
+          pre.classList.add("duplicate");
+          pre.style.backgroundColor = colorMap.get(p);
+          pre.style.color = "#2f2f2f";
+        }
+        outputDiv.appendChild(pre);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="reset.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Noto+Serif+TC:wght@300;400;500;600;700;900&display=swap"
+    rel="stylesheet">
+  <title>段落檢查工具</title>
+  <style>
+    body {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 2px;
+  background-color: #f5f3ef;
+  color: #2f2f2f;
+  margin: 0 auto;
+  padding: 24px 24px; /* 上下 24px、左右 64px ≈ 48pt */
+  box-sizing: border-box;
+  max-width: 1600px;  /* 避免太寬，視覺更集中 */
+}
+
+  /* ⬛ 標題 */
+h2 {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 2px;
+  margin-top: 0;
+  font-weight: 700;
+  font-size: 24px;
+  color: #3a3a3a;
+  text-align: center;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 24px;
+}
+
+    
+    .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.toolbar-left, .toolbar-right {
+  flex: 1;
+  min-width: 280px;
+}
+
+    .toolbar label {
+      font-weight: 500;
+      color: #555;
+    }
+
+    .toolbar input[type="text"] {
+      width: 180px;
+      padding: 6px 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      border-radius: 4px;
+      color: #333;
+    }
+
+    .toolbar button {
+      padding: 6px 14px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .analyze-btn {
+      background-color: #6d8b74;
+      color: white;
+    }
+
+    .analyze-btn:hover {
+      background-color: #5a7a63;
+    }
+
+    .clear-btn {
+      background-color: #a65f5f;
+      color: white;
+    }
+
+    .clear-btn:hover {
+      background-color: #944e4e;
+    }
+
+   
+/* 左區：內部分左右 */
+.toolbar-left-inner,
+.toolbar-right-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.toolbar-left-start,
+.toolbar-right-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-left-end,
+.toolbar-right-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.stats-box {
+  font-size: 18px;
+  color: #3a3a3a;
+  font-weight: 600;
+  white-space: nowrap;
+    }
+
+    .container {
+      display: flex;
+      gap: 20px;
+    }
+
+    .left, .right {
+      flex: 1;
+    }
+
+    textarea {
+      width: 100%;
+      height: 400px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      background-color: #ffffff;
+      font-size: 14px;
+      border-radius: 6px;
+      box-sizing: border-box;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    pre {
+      background-color: #f9f7f5;
+      padding: 10px 12px;
+      border-radius: 4px;
+      margin: 4px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border: 1px solid #e0dfdc;
+    }
+
+    .duplicate {
+      font-weight: bold;
+      border-left: 3px solid #a08976;
+    }
+  </style>
+</head>
+<body>
+  <h2>段落檢查工具</h2>
+
+  <!-- 🔹 最上方工具列 -->
+  <div class="toolbar">
+    <!-- 左側：標點輸入 + 分析 -->
+    <div class="toolbar-left">
+      <div class="toolbar-left-inner">
+        <div class="toolbar-left-start">
+          <label for="delimiterInput">標點符號（用來分段）：</label>
+          <input type="text" id="delimiterInput" value="。！？!?" />
+        </div>
+        <div class="toolbar-left-end">
+          <button class="analyze-btn" onclick="processText()">分析段落</button>
+        </div>
+      </div>
+    </div>
+  
+    <!-- 右側：統計 + 清除 -->
+    <div class="toolbar-right">
+      <div class="toolbar-right-inner">
+        <div class="toolbar-right-start">
+          <div class="stats-box">
+            <span id="stats-total">總共 0 段</span>　
+            <span id="stats-duplicate">重複 0 段</span>
+          </div>
+        </div>
+        <div class="toolbar-right-end">
+          <button class="clear-btn" onclick="clearText()">清除內容</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="left">
+      <textarea id="inputText" placeholder="把段落文字貼上，交給我處理..."></textarea>
+    </div>
+    <div class="right">
+      <h3>段落內容：</h3>
+      <div id="output"></div>
+    </div>
+  </div>
+
+  <script>
+    function processText() {
+  const input = document.getElementById("inputText").value;
+  const delimiterInput = document.getElementById("delimiterInput").value || "。！？!?";
+  const escapedDelimiters = delimiterInput.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const splitRegex = new RegExp(`(?<=[${escapedDelimiters}])`, "g");
+
+  const paragraphs = input.split(splitRegex).map(p => p.trim()).filter(p => p !== "");
+
+  document.getElementById("stats-total").textContent = `總共 ${paragraphs.length} 段`;
+
+  // 色彩組：復古高雅色盤
+  const vintageColors = [
+    "#f3e9dc", "#e8d8c3", "#d5c4a1", "#ede0d4",
+    "#f6f0e2", "#d6ccc2", "#c8b6a6", "#e2d8cf",
+    "#e4d6a7", "#f0ebe3", "#ede4d9"
+  ];
+
+  // 建立每段的五字片段 key 集合
+  const paraKeys = new Map();  // idx -> Set<key>
+  const keyToParas = new Map(); // key -> Set<idx>
+
+  paragraphs.forEach((para, idx) => {
+    const keys = new Set();
+    for (let i = 0; i <= para.length - 10; i++) {
+      const key = para.slice(i, i + 10);
+      keys.add(key);
+      if (!keyToParas.has(key)) {
+        keyToParas.set(key, new Set());
+      }
+      keyToParas.get(key).add(idx);
+    }
+    paraKeys.set(idx, keys);
+  });
+
+  // 利用 union-find 方法分群
+  const parent = Array(paragraphs.length).fill(0).map((_, i) => i);
+  function find(i) {
+    if (parent[i] !== i) parent[i] = find(parent[i]);
+    return parent[i];
+  }
+  function union(i, j) {
+    const pi = find(i);
+    const pj = find(j);
+    if (pi !== pj) parent[pi] = pj;
+  }
+
+  keyToParas.forEach(indexSet => {
+    const ids = [...indexSet];
+    for (let i = 0; i < ids.length - 1; i++) {
+      union(ids[i], ids[i + 1]);
+    }
+  });
+
+  // 建立分組對應：groupId -> [段落 index...]
+  const groups = new Map();
+  paragraphs.forEach((_, idx) => {
+    const root = find(idx);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(idx);
+  });
+
+  // 過濾掉只出現一次的 group
+  const duplicateGroups = [...groups.values()].filter(g => g.length > 1);
+
+  // 對每個 group 分配底色
+  const colorMap = new Map(); // idx -> color
+  duplicateGroups.forEach((group, i) => {
+    const color = vintageColors[i % vintageColors.length];
+    group.forEach(idx => {
+      colorMap.set(idx, color);
+    });
+  });
+
+  // 顯示統計
+  document.getElementById("stats-duplicate").textContent = `重複 ${colorMap.size/2} 段`;
+
+  // 顯示段落
+  const outputDiv = document.getElementById("output");
+  outputDiv.innerHTML = "";
+
+  paragraphs.forEach((p, i) => {
+    const pre = document.createElement("pre");
+    pre.textContent = `${i + 1}. ${p}`;
+    if (colorMap.has(i)) {
+      pre.classList.add("duplicate");
+      pre.style.backgroundColor = colorMap.get(i);
+      pre.style.color = "#2f2f2f";
+    }
+    outputDiv.appendChild(pre);
+  });
+}
+
+
+    function clearText() {
+      document.getElementById("inputText").value = "";
+      document.getElementById("output").innerHTML = "";
+      document.getElementById("stats-total").textContent = "總共 0 段";
+      document.getElementById("stats-duplicate").textContent = "重複 0 段";
+    }
+  </script>
+</body>
+</html>
