@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="reset.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,7 +160,58 @@ h2 {
       font-weight: bold;
       border-left: 3px solid #a08976;
     }
+
+    @media (max-width: 768px) {
+  body {
+    padding: 16px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .toolbar-left-inner,
+  .toolbar-right-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .toolbar input[type="text"] {
+    width: 100%;
+  }
+
+  .container {
+    flex-direction: column;
+  }
+
+  textarea {
+    height: 250px;
+    font-size: 16px;
+  }
+
+  pre {
+    font-size: 16px;
+  }
+
+  .stats-box {
+    font-size: 16px;
+  }
+
+  .toolbar button {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  .toolbar-left-end,
+  .toolbar-right-end {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
   </style>
+  
 </head>
 <body>
   <h2>段落檢查工具</h2>
